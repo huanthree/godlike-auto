@@ -1,9 +1,10 @@
+YAML
 name: Auto Renew
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次
-  workflow_dispatch:  # 允许手动触发
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   renew:
@@ -20,12 +21,19 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
+          sudo apt-get install -y \
+            chromium-browser \
+            chromium-chromedriver \
+            xvfb \
+            libxss1 \
+            libxtst6 \
+            libgtk-3-0 \
+            libgbm1
 
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
-          pip install selenium webdriver-manager
+          pip install selenium undetected-chromedriver==3.5.5
 
       - name: Run renewal script
         env:
