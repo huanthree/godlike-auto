@@ -13,56 +13,47 @@ class RenewAutomation:
     def setup_driver(self):
         options = uc.ChromeOptions()
         
-        # 增强型无头模式配置
+        # 路径配置优化
+        options.binary_location = os.getenv('CHROME_PATH', '/usr/bin/chromium-browser')
+        driver_executable_path = os.getenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
+        
+        # 权限配置
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
-        options.add_argument("--disable-infobars")
-        options.add_argument("--disable-extensions")
         
         if os.getenv('HEADLESS_MODE', 'false').lower() == 'true':
             options.add_argument("--headless=new")
             
-        # 用户代理随机化
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
-        ]
-        options.add_argument(f"user-agent={user_agents[0]}")
+        # 使用用户级临时目录
+        user_data_dir = "/home/runner/chrome_profile"
+        options.add_argument(f"--user-data-dir={user_data_dir}")
         
         return uc.Chrome(
             options=options,
-            version_main=114,
-            driver_executable_path="/usr/bin/chromedriver"
+            driver_executable_path=driver_executable_path,
+            version_main=114
         )
 
     def handle_captcha(self):
-        """优化的人机验证处理流程"""
         try:
-            # 显式等待页面加载完成
-            self.wait.until(
-                EC.presence_of_element_located((By.TAG_NAME, 'body'))
-            )
+            self.wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
             
-            # 切换到验证框架
-            self.driver.switch_to.frame(
-                self.wait.until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[title*='验证']"))
-                )
+            # 优化iframe切换逻辑
+            iframe = self.wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[title*='验证']"))
             )
+            self.driver.switch_to.frame(iframe)
             
-            # 等待复选框可点击
+            # 添加显式等待确保元素加载
             checkbox = self.wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".recaptcha-checkbox"))
             )
+            checkbox.click()
             
-            # 使用动作链模拟人类点击
-            action = webdriver.ActionChains(self.driver)
-            action.move_to_element(checkbox).pause(1).click().perform()
-            
-            # 验证状态检测
+            # 验证状态检测优化
             self.wait.until(
-                lambda d: d.find_element(By.CSS_SELECTOR, ".recaptcha-checkbox").get_attribute("aria-checked") == "true"
+                lambda d: "aria-checked" in checkbox.get_attribute("outerHTML")
             )
             
         except Exception as e:
@@ -71,27 +62,20 @@ class RenewAutomation:
             raise
         finally:
             self.driver.switch_to.default_content()
-            time.sleep(2)
 
     def perform_renew(self):
         try:
             self.driver.get("https://godlike.cool/huan")
-            
-            # 处理人机验证
             self.handle_captcha()
             
-            # 点击续订按钮
             renew_button = self.wait.until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Renew Server')]"))
             )
             renew_button.click()
             
-            # 验证操作结果
+            # 添加结果验证
             self.wait.until(
-                EC.text_to_be_present_in_element(
-                    (By.CSS_SELECTOR, "body"),
-                    "success"
-                )
+                EC.visibility_of_element_located((By.CSS_SELECTOR, ".success-indicator"))
             )
             print("续订操作成功完成")
             
