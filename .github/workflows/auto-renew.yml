@@ -28,14 +28,19 @@ jobs:
             libxtst6 \
             libgtk-3-0 \
             libgbm1
+          # 设置符号链接到用户目录
+          sudo ln -s /usr/bin/chromium-browser /home/runner/chromium
+          sudo ln -s /usr/bin/chromedriver /home/runner/chromedriver
 
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
-          pip install selenium undetected-chromedriver==3.5.5
+          pip install undetected-chromedriver==3.5.5 selenium webdriver-manager
 
       - name: Run renewal script
         env:
           HEADLESS_MODE: "true"
+          CHROME_PATH: "/home/runner/chromium"
+          CHROMEDRIVER_PATH: "/home/runner/chromedriver"
         run: |
           xvfb-run -a python auto_renew.py
